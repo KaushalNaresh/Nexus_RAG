@@ -1,0 +1,53 @@
+version: "3.9"
+
+services:
+
+  # ── Nexus RAG API ───────────────────────────────────────────────────────────
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: nexus-rag-api
+    ports:
+      - "8000:8000"
+    env_file:
+      - ../.env
+    environment:
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      # Persist BM25 params so reranker survives restarts
+      - bm25_data:/app/bm25_data
+      # Persist evaluation results
+      - eval_results:/app/eval_results
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ── Redis (Semantic Cache) ──────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: nexus-rag-redis
+    ports:
+      - "6379:6379"
+    command: >
+      redis-server
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --save ""
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  bm25_data:
+  eval_results:
