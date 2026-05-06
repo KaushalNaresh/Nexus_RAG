@@ -50,12 +50,34 @@ def run_ragas_evaluation(
     try:
         from datasets import Dataset
         from ragas import evaluate
-        from ragas.metrics import answer_relevancy, context_precision, faithfulness
+        from ragas.metrics import Faithfulness, AnswerRelevancy, ContextPrecision
+        from ragas.llms import LangchainLLMWrapper
+        from ragas.embeddings import LangchainEmbeddingsWrapper
+        from langchain_openai import ChatOpenAI, OpenAIEmbeddings
     except ImportError as exc:
         raise ImportError(
             "Ragas and/or datasets are not installed. "
-            "Run: pip install ragas datasets"
+            "Run: pip install ragas datasets langchain-openai"
         ) from exc
+
+    from app.core.config import get_settings  # noqa: PLC0415
+    settings = get_settings()
+
+    # Ragas 0.4.x requires explicit LLM + embeddings wrappers
+    ragas_llm = LangchainLLMWrapper(
+        ChatOpenAI(model=settings.openai_model, openai_api_key=settings.openai_api_key)
+    )
+    ragas_embeddings = LangchainEmbeddingsWrapper(
+        OpenAIEmbeddings(
+            model=settings.embedding_model,
+            dimensions=settings.embedding_dimensions,
+            openai_api_key=settings.openai_api_key,
+        )
+    )
+
+    faithfulness_metric = Faithfulness(llm=ragas_llm)
+    answer_relevancy_metric = AnswerRelevancy(llm=ragas_llm, embeddings=ragas_embeddings)
+    context_precision_metric = ContextPrecision(llm=ragas_llm)
 
     data: Dict[str, List] = {
         "question": questions,
@@ -63,13 +85,12 @@ def run_ragas_evaluation(
         "contexts": contexts,
     }
 
-    metrics = [faithfulness, answer_relevancy, context_precision]
+    metrics = [faithfulness_metric, answer_relevancy_metric, context_precision_metric]
 
     if ground_truths:
-        from ragas.metrics import context_recall  # noqa: PLC0415
-
+        from ragas.metrics import ContextRecall  # noqa: PLC0415
         data["ground_truth"] = ground_truths
-        metrics.append(context_recall)
+        metrics.append(ContextRecall(llm=ragas_llm))
 
     dataset = Dataset.from_dict(data)
 
@@ -99,27 +120,46 @@ def run_ragas_evaluation(
 def print_evaluation_report(scores: Dict[str, Any]) -> None:
     """Print a formatted evaluation report to stdout."""
     _SEP = "=" * 62
+    # Ragas 0.4.x uses snake_case metric keys in the output dataframe
     _metric_labels = {
         "faithfulness": "Faithfulness        (grounded in context?)",
         "answer_relevancy": "Answer Relevancy    (answers the question?)",
         "context_precision": "Context Precision   (retrieved chunks useful?)",
         "context_recall": "Context Recall      (context covers ground truth?)",
+        # alternate key names used by some Ragas 0.4.x builds
+        "AnswerRelevancy": "Answer Relevancy    (answers the question?)",
+        "Faithfulness": "Faithfulness        (grounded in context?)",
+        "ContextPrecision": "Context Precision   (retrieved chunks useful?)",
+        "ContextRecall": "Context Recall      (context covers ground truth?)",
     }
 
     print(f"\n{_SEP}")
     print("  NEXUS RAG — RAGAS EVALUATION REPORT")
     print(_SEP)
 
+    seen_labels: set = set()
     for key, label in _metric_labels.items():
-        if key not in scores:
+        if key not in scores or label in seen_labels:
             continue
-        score: float = scores[key]
-        filled = int(round(score * 20))
+        score = scores[key]
+        # Skip NaN — metric had no valid samples (not enough context)
+        try:
+            if score != score:  # NaN check
+                print(f"  [–] {label}")
+                print(f"       Score: N/A  (insufficient context for this metric)")
+                print()
+                seen_labels.add(label)
+                continue
+            score = float(score)
+        except (TypeError, ValueError):
+            continue
+        filled = int(round(max(0.0, min(1.0, score)) * 20))
         bar = "█" * filled + "░" * (20 - filled)
         status = "✓" if score >= 0.7 else "~" if score >= 0.5 else "✗"
         print(f"  [{status}] {label}")
         print(f"       Score: {score:.4f}  |{bar}|")
         print()
+        seen_labels.add(label)
 
     print(f"  Samples evaluated : {scores.get('num_samples', 'N/A')}")
     print(f"  Timestamp         : {scores.get('timestamp', 'N/A')}")

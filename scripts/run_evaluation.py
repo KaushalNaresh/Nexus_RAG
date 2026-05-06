@@ -41,6 +41,10 @@ async def _evaluate(output_dir: str) -> None:
     settings = get_settings()
     setup_logging(settings.log_level)
 
+    # Ragas resolves OpenAI credentials from OS env vars, not pydantic-settings.
+    import os
+    os.environ.setdefault("OPENAI_API_KEY", settings.openai_api_key)
+
     logger.info("Initialising pipeline components...")
     searcher = HybridSearcher()
     reranker = get_reranker()

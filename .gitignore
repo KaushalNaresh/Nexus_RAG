@@ -30,8 +30,9 @@ env/
 htmlcov/
 .mypy_cache/
 
-# BM25 model params (regenerated during ingestion)
+# BM25 model params and corpus cache (regenerated during ingestion)
 bm25_params.json
+bm25_corpus_cache.json
 
 # Evaluation results (gitignore raw results, keep the directory)
 eval_results/*.json

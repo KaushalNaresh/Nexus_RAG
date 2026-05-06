@@ -109,8 +109,9 @@ class IngestionPipeline:
 
         texts = [c.page_content for c in chunks]
 
-        # Fit BM25 on the full corpus before encoding (must see all docs)
-        self.sparse_encoder.fit(texts)
+        # Accumulate texts with any previously fitted corpus so BM25 IDF
+        # scores reflect the full knowledge base, not just the new batch.
+        self.sparse_encoder.fit_incremental(texts)
 
         total = 0
         for batch_start in range(0, len(chunks), batch_size):
