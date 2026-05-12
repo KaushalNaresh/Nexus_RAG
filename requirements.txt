@@ -22,17 +22,14 @@ pinecone>=5.0.0
 pinecone-text>=0.9.0
 
 # ── Embeddings & Cross-Encoder Reranking ──────────────────────────────────────
-# Pinned for compatibility with torch 2.x available on linux/amd64
+# torch is installed separately in docker/Dockerfile from the CPU-only wheel
+# (saves ~300MB RAM vs the default CUDA build). For local dev, install torch
+# normally: pip install torch
 sentence-transformers==3.3.1
 transformers==4.44.2
-torch>=2.2.0,<2.6.0
 
-# ── Input Guardrails (NeMo — pattern matching + Colang flows) ─────────────────
+# ── Input Guardrails (NeMo) ───────────────────────────────────────────────────
 nemoguardrails>=0.10.0
-
-# ── Evaluation ────────────────────────────────────────────────────────────────
-ragas>=0.2.0
-datasets>=3.1.0
 
 # ── Document Loading ──────────────────────────────────────────────────────────
 pymupdf>=1.24.0
@@ -46,6 +43,10 @@ aiofiles>=24.1.0
 # ── Logging ───────────────────────────────────────────────────────────────────
 structlog>=24.4.0
 
-# ── Testing ───────────────────────────────────────────────────────────────────
-pytest>=8.3.0
-pytest-asyncio>=0.24.0
+# ── Evaluation (local / CI only — not needed in the Docker API server) ─────────
+# ragas>=0.2.0
+# datasets>=3.1.0
+
+# ── Testing (local / CI only) ─────────────────────────────────────────────────
+# pytest>=8.3.0
+# pytest-asyncio>=0.24.0

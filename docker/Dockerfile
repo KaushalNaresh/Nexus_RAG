@@ -8,16 +8,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
+# Install CPU-only PyTorch FIRST, before any other packages.
+# This prevents sentence-transformers from pulling in the CUDA build (~1.8 GB).
+# CPU wheel: ~250 MB installed, ~100 MB RSS at runtime vs ~400 MB for CUDA.
+RUN pip install --no-cache-dir --prefix=/install \
+    torch==2.3.1 \
+    --index-url https://download.pytorch.org/whl/cpu
+
+# Install remaining app dependencies (torch already satisfied above).
 COPY requirements.txt .
 RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
-# Pre-download the cross-encoder model weights into a known path.
-# HF_HOME is set explicitly so we can COPY the cache into the runtime stage.
+# Pre-bake cross-encoder weights so cold starts load from disk, not the internet.
 ENV HF_HOME=/hf_cache
 RUN PYTHONPATH=/install/lib/python3.11/site-packages \
     python -c "
 from sentence_transformers import CrossEncoder
-model = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')
+CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')
 print('Cross-encoder pre-baked OK')
 "
 
@@ -31,13 +38,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy pip packages
+# Copy pip packages (includes CPU torch)
 COPY --from=builder /install /usr/local
 
-# Copy pre-baked HuggingFace model cache — this is the key step
+# Copy pre-baked HuggingFace model cache
 COPY --from=builder /hf_cache /hf_cache
-
-# Tell HuggingFace/sentence-transformers where the cache lives
 ENV HF_HOME=/hf_cache
 ENV TRANSFORMERS_CACHE=/hf_cache
 
@@ -53,7 +58,8 @@ USER nexus
 
 EXPOSE 8000
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=5 \
+# Longer start-period: warm-up loads models before first request
+HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=5 \
     CMD curl -f http://localhost:8000/health || exit 1
 
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
