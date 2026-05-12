@@ -35,6 +35,17 @@ async def lifespan(app: FastAPI):
         nemo_guardrails=settings.enable_nemo_guardrails,
         output_guardrails=settings.enable_output_guardrails,
     )
+
+    # Eagerly load heavy singletons so the first query is fast.
+    # Failures here are non-fatal — the service still starts.
+    try:
+        from app.api.dependencies import get_hybrid_searcher, get_reranker
+        get_hybrid_searcher()
+        get_reranker()
+        logger.info("Warm-up complete: searcher + reranker loaded")
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Warm-up failed (non-fatal)", error=str(exc))
+
     yield
     logger.info("Nexus RAG shutting down")
 

@@ -12,6 +12,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
+# Pre-download the cross-encoder model so first query doesn't stall.
+# This bakes the 90MB model weights into the image layer.
+RUN PYTHONPATH=/install/lib/python3.11/site-packages \
+    python -c "from sentence_transformers import CrossEncoder; CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2'); print('Cross-encoder cached OK')"
+
 # ── Stage 2: runtime image ────────────────────────────────────────────────────
 FROM python:3.11-slim AS runtime
 

@@ -35,17 +35,31 @@ export interface CompareResponse {
 
 async function request<T>(
   path: string,
-  init: RequestInit
+  init: RequestInit,
+  timeoutMs = 90_000   // 90s — generous for cold start + model load + LLM call
 ): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...init,
-    headers: { Accept: "application/json", ...(init.headers ?? {}) },
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`API ${res.status}: ${text}`);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const res = await fetch(`${API_BASE}${path}`, {
+      ...init,
+      signal: controller.signal,
+      headers: { Accept: "application/json", ...(init.headers ?? {}) },
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`API ${res.status}: ${text}`);
+    }
+    return res.json() as Promise<T>;
+  } catch (e: unknown) {
+    if (e instanceof DOMException && e.name === "AbortError") {
+      throw new Error("Request timed out. The backend may still be waking up — please retry in 10s.");
+    }
+    throw e;
+  } finally {
+    clearTimeout(timer);
   }
-  return res.json() as Promise<T>;
 }
 
 export async function ingestFile(file: File): Promise<IngestResponse> {
