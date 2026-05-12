@@ -22,11 +22,7 @@ RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 # Pre-bake cross-encoder weights so cold starts load from disk, not the internet.
 ENV HF_HOME=/hf_cache
 RUN PYTHONPATH=/install/lib/python3.11/site-packages \
-    python -c "
-from sentence_transformers import CrossEncoder
-CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')
-print('Cross-encoder pre-baked OK')
-"
+    python -c "from sentence_transformers import CrossEncoder; CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2'); print('Cross-encoder pre-baked OK')"
 
 # ── Stage 2: runtime image ────────────────────────────────────────────────────
 FROM python:3.11-slim AS runtime
