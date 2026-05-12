@@ -17,7 +17,7 @@ FROM python:3.11-slim AS runtime
 
 WORKDIR /app
 
-# Runtime-only system deps (libgomp required by sentence-transformers)
+# Runtime-only system deps (libgomp required by sentence-transformers/torch)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgomp1 \
     curl \
@@ -25,9 +25,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Copy installed packages from builder
 COPY --from=builder /install /usr/local
-
-# Download the spaCy model used by presidio-analyzer (non-fatal if it fails)
-RUN python -m spacy download en_core_web_sm 2>/dev/null || true
 
 # Copy application source
 COPY . .
@@ -38,7 +35,7 @@ USER nexus
 
 EXPOSE 8000
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
