@@ -2,6 +2,17 @@
 
 A Retrieval-Augmented Generation system that features hybrid search, cross-encoder reranking, dual-layer guardrails, and a Ragas evaluation pipeline.
 
+**[🚀 Live Demo → nexus-rag-beta.vercel.app](https://nexus-rag-beta.vercel.app/)**
+
+> Frontend on Vercel · Backend (FastAPI) on Render · Vector DB on Pinecone
+
+| Page | Description |
+|------|-------------|
+| [Chat](https://nexus-rag-beta.vercel.app/) | Upload a PDF or URL, then query with full hybrid search + guardrails |
+| [Compare](https://nexus-rag-beta.vercel.app/compare) | Side-by-side: Naive RAG vs. Nexus RAG — see what reranking and guardrails change |
+
+> **Note:** The backend runs on Render's free tier and may take ~30s to wake up after inactivity. The UI shows a warm-up indicator while it starts.
+
 ---
 
 ## Architecture
