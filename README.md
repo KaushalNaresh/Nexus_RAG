@@ -291,16 +291,48 @@ full report. Results are saved as timestamped JSON in `eval_results/`.
 
 ---
 
-## Deployment to Railway / Render
+## Frontend
 
-1. Push the repo to GitHub.
-2. On Railway/Render, create a new service from the repo.
-3. Set the Dockerfile path to `docker/Dockerfile`.
-4. Add environment variables (copy from `.env.example`).
-5. Pinecone runs in the cloud — no extra infra needed.
-6. For Redis: add a Redis service on Railway and set `REDIS_URL`.
+A Next.js 14 + TypeScript frontend lives in `frontend/`. It has three pages:
 
-The `/health` endpoint is pre-configured as the health check path.
+| Page | URL | What it does |
+|------|-----|-------------|
+| Chat | `/` | Upload docs + query the full production RAG pipeline |
+| Compare | `/compare` | Side-by-side: Naive RAG vs. Production RAG (one backend call) |
+| Evals | `/evals` | Static Ragas metric cards + 4-run improvement trajectory |
+
+### Run locally
+
+```bash
+cd frontend
+cp .env.local.example .env.local   # set NEXT_PUBLIC_API_URL=http://localhost:8000
+npm install
+npm run dev                         # http://localhost:3000
+```
+
+---
+
+## Deployment
+
+### Backend → Render
+
+1. Connect the GitHub repo to Render and create a new **Web Service**.
+2. Set **Dockerfile path** to `docker/Dockerfile` (root context).
+3. Add all env vars from `.env.example` in the Render dashboard.
+4. Set the **Health Check Path** to `/health`.
+5. Pinecone is serverless — no extra infra required.
+
+> The free Render tier spins down after inactivity. The first request after sleep takes ~30s.
+
+### Frontend → Vercel
+
+1. Push the repo to GitHub (already done).
+2. Go to [vercel.com/new](https://vercel.com/new) → import this repo.
+3. Set **Root Directory** to `frontend`.
+4. Add environment variable: `NEXT_PUBLIC_API_URL=https://your-render-app.onrender.com`
+5. Deploy — every `git push` to `main` auto-deploys.
+
+The backend must be running (Render) before the frontend can make API calls.
 
 ---
 
@@ -321,3 +353,6 @@ The `/health` endpoint is pre-configured as the health check path.
 | Evaluation | Ragas |
 | Logging | structlog (JSON in prod) |
 | Containerisation | Docker + docker-compose |
+| Frontend | Next.js 14 + TypeScript + Tailwind CSS |
+| Frontend deployment | Vercel |
+| Backend deployment | Render (Docker) |

@@ -41,6 +41,11 @@ class HealthResponse(BaseModel):
     timestamp: datetime = Field(default_factory=_utcnow)
 
 
+class CompareResponse(BaseModel):
+    naive: QueryResponse
+    production: QueryResponse
+
+
 class EvalResult(BaseModel):
     faithfulness: float
     answer_relevancy: float

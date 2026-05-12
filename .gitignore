@@ -47,3 +47,9 @@ data/*.txt
 # OS
 .DS_Store
 Thumbs.db
+
+# Next.js frontend
+frontend/.next/
+frontend/node_modules/
+frontend/.env.local
+frontend/out/

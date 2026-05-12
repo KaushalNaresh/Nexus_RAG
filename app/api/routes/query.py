@@ -19,7 +19,7 @@ from app.generation.chain import get_rag_chain
 from app.guardrails.nemo.rails import check_input
 from app.guardrails.output.guard import get_output_guard
 from app.models.request import QueryRequest
-from app.models.response import QueryResponse, SourceDocument
+from app.models.response import CompareResponse, QueryResponse, SourceDocument
 from app.retrieval.hybrid_search import HybridSearcher
 from app.retrieval.reranker import CrossEncoderReranker
 
@@ -114,6 +114,79 @@ async def query(
         latency_ms=latency,
         guardrail_triggered=not result.is_safe,
         guardrail_message=result.message,
+    )
+
+
+@router.post("/query/compare", response_model=CompareResponse)
+async def compare(
+    body: QueryRequest,
+    searcher: HybridSearcher = Depends(get_hybrid_searcher),
+    reranker: CrossEncoderReranker = Depends(get_reranker),
+) -> CompareResponse:
+    """Run naive RAG and production RAG in sequence and return both results.
+
+    Naive RAG:  dense-only search (alpha=1.0), top_k=5, no reranking, no guardrails.
+    Production: hybrid search (alpha=0.5), top_k=20, cross-encoder → top-5, dual guardrails.
+    """
+    production = await query(body, searcher, reranker)
+    naive = await _run_naive(body.query, searcher)
+    return CompareResponse(naive=naive, production=production)
+
+
+async def _run_naive(query_text: str, searcher: HybridSearcher) -> QueryResponse:
+    """Naive RAG: dense-only retrieval, no reranking, no guardrails."""
+    t0 = time.perf_counter()
+
+    # Dense-only search (alpha=1.0 → sparse weight = 0)
+    try:
+        candidates = searcher.search(query=query_text, top_k=5, alpha=1.0)
+    except Exception as exc:
+        logger.error("Naive search failed", error=str(exc))
+        return QueryResponse(
+            answer="Retrieval error in naive pipeline.",
+            sources=[],
+            latency_ms=_ms(t0),
+        )
+
+    if not candidates:
+        return QueryResponse(
+            answer="No relevant documents found in the knowledge base.",
+            sources=[],
+            latency_ms=_ms(t0),
+        )
+
+    # No reranking — use raw scores as-is
+    docs_for_llm = [
+        {"text": c["text"], "metadata": c.get("metadata", {}), "rerank_score": c.get("score", 0.0)}
+        for c in candidates
+    ]
+
+    # LLM generation (same chain, no guardrails)
+    try:
+        chain = get_rag_chain()
+        raw_answer: str = chain.invoke({"question": query_text, "context": docs_for_llm})
+    except Exception as exc:
+        logger.error("Naive generation failed", error=str(exc))
+        return QueryResponse(
+            answer="Generation error in naive pipeline.",
+            sources=[],
+            latency_ms=_ms(t0),
+        )
+
+    sources = [
+        SourceDocument(
+            content=doc["text"][:500],
+            source=doc.get("metadata", {}).get("source"),
+            score=doc.get("rerank_score"),
+            metadata=doc.get("metadata", {}),
+        )
+        for doc in docs_for_llm
+    ]
+    return QueryResponse(
+        answer=raw_answer,
+        sources=sources,
+        latency_ms=_ms(t0),
+        guardrail_triggered=False,
     )
 
 

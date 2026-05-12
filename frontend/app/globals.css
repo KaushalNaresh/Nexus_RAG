@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-primary: #0a0a12;
+  --bg-card: #11111c;
+  --bg-card-hover: #16162a;
+  --border: rgba(139, 92, 246, 0.15);
+  --border-strong: rgba(139, 92, 246, 0.3);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: #f8fafc;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  min-height: 100vh;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #3f3f6a; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #7c3aed; }
+
+/* Prose-like answer rendering */
+.answer-text p { margin-bottom: 0.75rem; }
+.answer-text ul { list-style: disc; padding-left: 1.25rem; margin-bottom: 0.75rem; }
+.answer-text li { margin-bottom: 0.25rem; }
+.answer-text strong { color: #c4b5fd; }
+.answer-text code {
+  background: rgba(139, 92, 246, 0.12);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-size: 0.85em;
+}
