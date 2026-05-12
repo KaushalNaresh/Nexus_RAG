@@ -6,6 +6,7 @@ Run locally:
 Run via Docker:
     docker compose -f docker/docker-compose.yml up
 """
+import asyncio
 from contextlib import asynccontextmanager
 
 import structlog
@@ -36,15 +37,20 @@ async def lifespan(app: FastAPI):
         output_guardrails=settings.enable_output_guardrails,
     )
 
-    # Eagerly load heavy singletons so the first query is fast.
-    # Failures here are non-fatal — the service still starts.
+    # Eagerly load heavy singletons in a thread so the event loop stays free.
+    # Without run_in_executor, loading the 90MB cross-encoder blocks asyncio,
+    # causing Render's load balancer to 502 any concurrent requests.
+    from app.api.dependencies import get_hybrid_searcher, get_reranker
     try:
-        from app.api.dependencies import get_hybrid_searcher, get_reranker
-        get_hybrid_searcher()
-        get_reranker()
-        logger.info("Warm-up complete: searcher + reranker loaded")
+        await asyncio.to_thread(get_hybrid_searcher)
+        logger.info("Warm-up: HybridSearcher ready")
     except Exception as exc:  # noqa: BLE001
-        logger.warning("Warm-up failed (non-fatal)", error=str(exc))
+        logger.warning("Warm-up: HybridSearcher failed (non-fatal)", error=str(exc))
+    try:
+        await asyncio.to_thread(get_reranker)
+        logger.info("Warm-up: CrossEncoder ready")
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Warm-up: CrossEncoder failed (non-fatal)", error=str(exc))
 
     yield
     logger.info("Nexus RAG shutting down")
