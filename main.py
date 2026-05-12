@@ -54,9 +54,20 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    _settings = get_settings()
+    # In production, restrict CORS to the deployed Vercel frontend.
+    # Set ALLOWED_ORIGINS env var on Render, e.g.:
+    #   https://nexus-rag.vercel.app,https://nexus-rag-git-main.vercel.app
+    # Falls back to wildcard for local dev.
+    _raw_origins = _settings.allowed_origins or "*"
+    _origins = (
+        [o.strip() for o in _raw_origins.split(",")]
+        if _raw_origins != "*"
+        else ["*"]
+    )
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

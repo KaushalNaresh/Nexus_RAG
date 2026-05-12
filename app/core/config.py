@@ -49,6 +49,8 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     api_host: str = "0.0.0.0"
     api_port: int = 8000
+    # Comma-separated list of allowed CORS origins, or "*" for wildcard (local dev)
+    allowed_origins: str = "*"
 
     model_config = SettingsConfigDict(
         env_file=".env",
