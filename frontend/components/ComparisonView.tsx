@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
-  Loader2, Send, ShieldOff, Shield, Shuffle, Cpu, Clock,
-  Database, ArrowRight, ChevronDown, ChevronUp
+  Loader2, Send, Cpu, Clock,
+  Database, ArrowRight, ChevronDown, ChevronUp, AlertTriangle, RefreshCw
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -130,25 +130,38 @@ function ResultColumn({ label, tag, tagColor, features, result, loading, variant
 export default function ComparisonView() {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isColdStart, setIsColdStart] = useState(false);
   const [naive, setNaive] = useState<QueryResponse | null>(null);
   const [production, setProduction] = useState<QueryResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const lastQuery = useRef<string>("");
+  const coldStartTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const run = async (q?: string) => {
     const text = (q ?? query).trim();
     if (!text || loading) return;
+    lastQuery.current = text;
     setLoading(true);
     setError(null);
     setNaive(null);
     setProduction(null);
+    setIsColdStart(false);
+
+    coldStartTimer.current = setTimeout(() => setIsColdStart(true), 8000);
+
     try {
       const res = await compareRag(text);
       setNaive(res.naive);
       setProduction(res.production);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Compare failed");
+      const msg = e instanceof Error ? e.message : "Compare failed";
+      setError(msg.toLowerCase().includes("fetch") || msg.toLowerCase().includes("network")
+        ? "Could not reach the backend. The server may be waking up (free tier). Wait 30s and retry."
+        : msg);
     } finally {
       setLoading(false);
+      setIsColdStart(false);
+      if (coldStartTimer.current) clearTimeout(coldStartTimer.current);
     }
   };
 
@@ -185,9 +198,31 @@ export default function ComparisonView() {
         </Button>
       </div>
 
+      {/* Cold-start banner */}
+      {loading && isColdStart && (
+        <div className="flex items-start gap-3 rounded-lg border border-yellow-500/30 bg-yellow-500/8 p-4">
+          <Loader2 className="h-4 w-4 text-yellow-400 animate-spin mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm font-medium text-yellow-400">Backend is waking up…</p>
+            <p className="text-xs text-yellow-300/70 mt-1">
+              Free tier spins down after inactivity. First request takes ~30s. Please wait.
+            </p>
+          </div>
+        </div>
+      )}
+
       {error && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">
-          {error}
+        <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 space-y-2">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-red-400 shrink-0" />
+            <p className="text-sm text-red-400">{error}</p>
+          </div>
+          <button
+            onClick={() => run(lastQuery.current)}
+            className="flex items-center gap-1.5 text-xs text-red-300 hover:text-white transition-colors"
+          >
+            <RefreshCw className="h-3 w-3" /> Retry
+          </button>
         </div>
       )}
 

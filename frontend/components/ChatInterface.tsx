@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Send, Loader2, Clock, Database, Cpu, ChevronDown, ChevronUp } from "lucide-react";
+import { Send, Loader2, Clock, Database, Cpu, ChevronDown, ChevronUp, AlertTriangle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import GuardrailBadge from "@/components/GuardrailBadge";
@@ -22,22 +22,37 @@ export default function ChatInterface() {
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<QueryResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isColdStart, setIsColdStart] = useState(false);
   const [showSources, setShowSources] = useState(true);
   const answerRef = useRef<HTMLDivElement>(null);
+  const coldStartTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastQuery = useRef<string>("");
 
   const submit = async (q?: string) => {
     const text = (q ?? query).trim();
     if (!text) return;
+    lastQuery.current = text;
     setLoading(true);
     setError(null);
     setResponse(null);
+    setIsColdStart(false);
+
+    // Show cold-start warning after 8s still loading
+    coldStartTimer.current = setTimeout(() => setIsColdStart(true), 8000);
+
     try {
       const res = await queryRag(text);
       setResponse(res);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Query failed");
+      const msg = e instanceof Error ? e.message : "Query failed";
+      const isFetchError = msg.toLowerCase().includes("fetch") || msg.toLowerCase().includes("network");
+      setError(isFetchError
+        ? "Could not reach the backend. If this is the first request, the server may be waking up (free tier). Wait 30s and try again."
+        : msg);
     } finally {
       setLoading(false);
+      setIsColdStart(false);
+      if (coldStartTimer.current) clearTimeout(coldStartTimer.current);
     }
   };
 
@@ -75,11 +90,26 @@ export default function ChatInterface() {
 
       {/* Loading skeleton */}
       {loading && (
-        <div className="space-y-3 animate-pulse">
-          <div className="h-4 rounded bg-white/8 w-3/4" />
-          <div className="h-4 rounded bg-white/8 w-full" />
-          <div className="h-4 rounded bg-white/8 w-5/6" />
-          <div className="h-4 rounded bg-white/8 w-2/3" />
+        <div className="space-y-3">
+          {isColdStart ? (
+            <div className="flex items-start gap-3 rounded-lg border border-yellow-500/30 bg-yellow-500/8 p-4">
+              <Loader2 className="h-4 w-4 text-yellow-400 animate-spin mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-yellow-400">Backend is waking up…</p>
+                <p className="text-xs text-yellow-300/70 mt-1">
+                  The Render free tier spins down after inactivity. First request takes ~30s.
+                  Hang tight — this only happens once per session.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3 animate-pulse">
+              <div className="h-4 rounded bg-white/8 w-3/4" />
+              <div className="h-4 rounded bg-white/8 w-full" />
+              <div className="h-4 rounded bg-white/8 w-5/6" />
+              <div className="h-4 rounded bg-white/8 w-2/3" />
+            </div>
+          )}
         </div>
       )}
 
@@ -145,8 +175,19 @@ export default function ChatInterface() {
 
       {/* Error */}
       {error && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">
-          {error}
+        <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 space-y-2">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-red-400 shrink-0" />
+            <p className="text-sm text-red-400">{error}</p>
+          </div>
+          {error.includes("waking up") || error.includes("fetch") ? (
+            <button
+              onClick={() => submit(lastQuery.current)}
+              className="flex items-center gap-1.5 text-xs text-red-300 hover:text-white transition-colors"
+            >
+              <RefreshCw className="h-3 w-3" /> Retry
+            </button>
+          ) : null}
         </div>
       )}
 
