@@ -3,7 +3,7 @@ import { GitCompare, Info } from "lucide-react";
 
 export const metadata = {
   title: "Compare — Nexus RAG + Evals",
-  description: "Side-by-side comparison of naive vs. production RAG architecture",
+  description: "Side-by-side comparison of naive vs. Nexus RAG architecture",
 };
 
 export default function ComparePage() {
@@ -15,7 +15,7 @@ export default function ComparePage() {
           <div className="flex items-center gap-2 mb-1">
             <GitCompare className="h-5 w-5 text-brand-400" />
             <h1 className="text-2xl font-bold text-white tracking-tight">
-              Naive vs. Production RAG
+              Naive RAG vs. Nexus RAG
             </h1>
           </div>
           <p className="text-sm text-slate-400">
@@ -32,7 +32,7 @@ export default function ComparePage() {
           </div>
           <div className="flex items-center gap-2 rounded-lg border border-brand-500/20 bg-brand-500/5 px-3 py-2">
             <div className="h-2 w-2 rounded-full bg-brand-400" />
-            <span className="text-xs text-brand-300 font-medium">Production</span>
+            <span className="text-xs text-brand-300 font-medium">Nexus RAG</span>
             <span className="text-xs text-slate-500">hybrid · reranked · guarded</span>
           </div>
         </div>

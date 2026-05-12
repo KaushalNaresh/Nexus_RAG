@@ -2,12 +2,13 @@ import DocumentUploader from "@/components/DocumentUploader";
 import ChatInterface from "@/components/ChatInterface";
 import BackendPinger from "@/components/BackendPinger";
 import { Card, CardContent } from "@/components/ui/card";
-import { Shield, Zap, Search } from "lucide-react";
+import { Layers, Shield, Zap, Search } from "lucide-react";
 
 const features = [
   { icon: Search, label: "Hybrid Search", desc: "Dense + BM25 sparse" },
   { icon: Zap, label: "Cross-Encoder", desc: "MS-MARCO reranker" },
   { icon: Shield, label: "Dual Guardrails", desc: "NeMo + Guardrails AI" },
+  { icon: Layers, label: "Ragas Evals", desc: "Faithfulness · Recall" },
 ];
 
 export default function ChatPage() {

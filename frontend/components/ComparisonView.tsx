@@ -188,7 +188,7 @@ export default function ComparisonView() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); run(); } }}
-          placeholder="Type a question to compare naive vs. production RAG…"
+          placeholder="Type a question to compare naive vs. Nexus RAG…"
           className="flex-1 min-h-[56px]"
           disabled={loading}
         />
@@ -248,7 +248,7 @@ export default function ComparisonView() {
         </div>
 
         <ResultColumn
-          label="Production RAG"
+          label="Nexus RAG"
           tag="Nexus"
           tagColor="text-brand-400 bg-brand-600/10 border border-brand-600/25"
           features={["Hybrid (α=0.5)", "BM25 + Dense", "Cross-encoder rerank", "Dual guardrails"]}
