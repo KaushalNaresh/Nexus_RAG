@@ -1,8 +1,6 @@
 # Nexus RAG
 
-A production-grade Retrieval-Augmented Generation system built to go beyond
-a simple demo. Features hybrid search, cross-encoder reranking, dual-layer
-guardrails, and a Ragas evaluation pipeline.
+A Retrieval-Augmented Generation system that features hybrid search, cross-encoder reranking, dual-layer guardrails, and a Ragas evaluation pipeline.
 
 ---
 
@@ -14,7 +12,7 @@ Client
   ▼
 FastAPI (main.py)
   │
-  ├─► [INPUT]  NeMo Guardrails ──── block jailbreak / injection / off-topic
+  ├─► [INPUT]  NeMo Guardrails - block jailbreak / injection / off-topic
   │
   ├─► [RETRIEVAL] Hybrid Search
   │       ├── Dense vectors  (OpenAI text-embedding-3-small)
