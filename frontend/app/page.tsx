@@ -1,5 +1,6 @@
 import DocumentUploader from "@/components/DocumentUploader";
 import ChatInterface from "@/components/ChatInterface";
+import BackendPinger from "@/components/BackendPinger";
 import { Card, CardContent } from "@/components/ui/card";
 import { Layers, Shield, Zap, Search } from "lucide-react";
 
@@ -37,6 +38,8 @@ export default function ChatPage() {
           ))}
         </div>
       </div>
+
+      <BackendPinger />
 
       {/* Two-panel layout */}
       <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-4">
