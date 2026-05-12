@@ -40,15 +40,14 @@ COPY --from=builder /install /usr/local
 # Copy pre-baked HuggingFace model cache
 COPY --from=builder /hf_cache /hf_cache
 ENV HF_HOME=/hf_cache
-ENV TRANSFORMERS_CACHE=/hf_cache
 
 # Copy application source
 COPY . .
 
-# Non-root user
+# Non-root user — must own /hf_cache so transformers can write its lock/migration files
 RUN useradd -m -u 1000 nexus \
     && chown -R nexus:nexus /app \
-    && chmod -R a+rX /hf_cache
+    && chown -R nexus:nexus /hf_cache
 
 USER nexus
 
