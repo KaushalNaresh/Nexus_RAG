@@ -3,12 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Layers, GitCompare, BarChart3, Zap } from "lucide-react";
+import { Layers, GitCompare, Zap } from "lucide-react";
 
 const links = [
   { href: "/", label: "Chat", icon: Zap },
   { href: "/compare", label: "Compare", icon: GitCompare },
-  { href: "/evals", label: "Evals", icon: BarChart3 },
 ];
 
 export default function Navbar() {
